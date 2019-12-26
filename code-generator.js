@@ -544,6 +544,17 @@ class DjangoCodeGenerator {
 
 function mapBasicTypesToReactType(elem) {
   var tags = elem.tags.filter(e=>e.name === 'to')
+  var ref_name = 'number';
+  var ref_list = 'number[]';
+  if (tags.length > 0) {
+    if (tags[0].value.indexOf('api.') != -1) {
+      ref_name += '|'+tags[0].value.replace('api.','')
+      ref_list += '|'+tags[0].value.replace('api.','')+'[]'
+    } else {
+      ref_name += '|custom.' + tags[0].value
+      ref_list += '|custom.' + tags[0].value + '[]'
+    }
+  } 
   var type_maps = {
     "string": "string",
     "text": "string",
@@ -556,9 +567,9 @@ function mapBasicTypesToReactType(elem) {
     "datetime": "string", // TODO Date or string ?
     "email": "string",
     "file": "string",
-    "foreign": tags.length > 0 ? tags[0].value.replace('api.','') : 'string',
-    "onetoone": tags.length > 0 ? tags[0].value.replace('api.','') : 'string',
-    "manytomany": tags.length > 0 ? tags[0].value.replace('api.','')+'[]' : 'string'
+    "foreign": ref_name,
+    "onetoone": ref_name,
+    "manytomany": ref_list
   }
   
   return elem.name + ':' + type_maps[elem.type.name]
