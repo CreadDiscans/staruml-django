@@ -359,21 +359,21 @@ class DjangoCodeGenerator {
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.OneToOneField('" + refObjName + "'"+ tags_str +")");
-          codeWriter.writeTypeLine(var_name+':'+refObjName)
+          codeWriter.writeTypeLine(var_name+':number|'+refObjName)
         }
 
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && asso.end2.multiplicity == "1"){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str +")");
-          codeWriter.writeTypeLine(var_name+':'+refObjName)
+          codeWriter.writeTypeLine(var_name+':number|'+refObjName)
         }
 
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..*', '1..*', '*'].includes(asso.end2.multiplicity.trim())){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.ManyToManyField('" + asso.end2.reference.name + "'"+ tags_str +")");
-          codeWriter.writeTypeLine(var_name+':'+refObjName+'[]')
+          codeWriter.writeTypeLine(var_name+':number[]|'+refObjName+'[]')
         }
     }
   }
