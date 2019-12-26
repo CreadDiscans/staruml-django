@@ -228,7 +228,7 @@ class DjangoCodeGenerator {
 
       } else if (elem.type){
         line += ' = ' + mapBasicTypesToDjangoFieldClass(elem);
-        
+        codeWriter.writeTypeLine(mapBasicTypesToReactType(elem))
       } else {
         line += ' = None';
       }
@@ -359,18 +359,21 @@ class DjangoCodeGenerator {
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.OneToOneField('" + refObjName + "'"+ tags_str +")");
+          codeWriter.writeTypeLine(var_name+':'+refObjName)
         }
 
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && asso.end2.multiplicity == "1"){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str +")");
+          codeWriter.writeTypeLine(var_name+':'+refObjName)
         }
 
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..*', '1..*', '*'].includes(asso.end2.multiplicity.trim())){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.ManyToManyField('" + asso.end2.reference.name + "'"+ tags_str +")");
+          codeWriter.writeTypeLine(var_name+':'+refObjName+'[]')
         }
     }
   }
@@ -437,6 +440,9 @@ class DjangoCodeGenerator {
       line += '(models.Model)';
     }
 
+    codeWriter.writeTypeLine('export type ' + elem.name + ' = {');
+    codeWriter.indentType();
+    codeWriter.writeTypeLine('id:number');
     codeWriter.writeLine(line + ':');
     codeWriter.indent();
 
@@ -478,7 +484,8 @@ class DjangoCodeGenerator {
         });
       }
     }
-
+    codeWriter.outdentType();
+    codeWriter.writeTypeLine('}');
     codeWriter.outdent();
     codeWriter.writeLine();
   }
@@ -516,7 +523,7 @@ class DjangoCodeGenerator {
       codeWriter.writeLine();
       this.writeClass(codeWriter, elem, options);
       fs.writeFileSync(fullPath, codeWriter.getData());
-
+      fs.writeFileSync(fullPath.replace('.py', '.d.ts'), codeWriter.getTypeData())
     // Enum
     } else if (elem instanceof type.UMLEnumeration) {
       fullPath = basePath + '/' + elem.name + '.py';
@@ -526,13 +533,35 @@ class DjangoCodeGenerator {
       codeWriter.writeLine();
       this.writeEnum(codeWriter, elem, options);
       fs.writeFileSync(fullPath, codeWriter.getData());
-
+      fs.writeFileSync(fullPath.replace('.py', '.d.ts'), codeWriter.getTypeData())
     // Others (Nothing generated.)
     } else {
       result.resolve();
     }
     return result.promise();
   }
+}
+
+function mapBasicTypesToReactType(elem) {
+  var tags = elem.tags.filter(e=>e.name === 'to')
+  var type_maps = {
+    "string": "string",
+    "text": "string",
+    "integer": "number",
+    "biginteger": "number",
+    "float": "number",
+    "decimal": "number",
+    "boolean": "boolean",
+    "date": "string", // TODO Date or string ?
+    "datetime": "string", // TODO Date or string ?
+    "email": "string",
+    "file": "string",
+    "foreign": tags.length > 0 ? tags[0].value.replace('api.','') : 'string',
+    "onetoone": tags.length > 0 ? tags[0].value.replace('api.','') : 'string',
+    "manytomany": tags.length > 0 ? tags[0].value.replace('api.','')+'[]' : 'string'
+  }
+  
+  return elem.name + ':' + type_maps[elem.type.name]
 }
 
 function mapBasicTypesToDjangoFieldClass(elem){

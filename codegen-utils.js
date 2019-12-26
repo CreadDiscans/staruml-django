@@ -38,6 +38,28 @@ class CodeWriter {
 
     /** @member {Array.<string>} indentations */
     this.indentations = [];
+    this.typeLines = [];
+    this.typeIndentations = [];
+  }
+
+  indentType() {
+    this.typeIndentations.push(this.indentString);
+  }
+
+  outdentType() {
+    this.typeIndentations.splice(this.typeIndentations.length -1, 1);
+  }
+
+  writeTypeLine(line) {
+    if (line) {
+      this.typeLines.push(this.typeIndentations.join('') + line);
+    } else {
+      this.typeLines.push('');
+    }
+  }
+
+  getTypeData() {
+    return this.typeLines.join('\n');
   }
 
   /**
