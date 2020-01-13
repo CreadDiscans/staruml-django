@@ -550,7 +550,10 @@ function mapBasicTypesToReactType(elem) {
     if (tags[0].value.indexOf('api.') != -1) {
       ref_name += '|'+tags[0].value.replace('api.','')
       ref_list += '|'+tags[0].value.replace('api.','')+'[]'
-    } else {
+    } else if (tags[0].value.indexOf('.') === -1) {
+      ref_name += '|'+tags[0].value
+      ref_list += '|'+tags[0].value+'[]'
+    }else {
       ref_name += '|custom.' + tags[0].value
       ref_list += '|custom.' + tags[0].value + '[]'
     }
