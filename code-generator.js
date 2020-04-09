@@ -169,7 +169,7 @@ class DjangoCodeGenerator {
 		  if (tag.name == "__str__") {
             codeWriter.writeLine('def __str__(self):');
             codeWriter.indent();
-            codeWriter.writeLine('return self.' + tag.value.trim().split('\n'));	
+            codeWriter.writeLine('return str(self.' + tag.value.trim().split('\n') + ')');	
             codeWriter.outdent();
             codeWriter.writeLine();
 		  }
