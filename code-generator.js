@@ -41,6 +41,7 @@ class DjangoCodeGenerator {
 
     /** @member {string} */
     this.basePath = basePath;
+    this.genericArr = [];
   }
 
   /**
@@ -228,7 +229,7 @@ class DjangoCodeGenerator {
 
       } else if (elem.type){
         line += ' = ' + mapBasicTypesToDjangoFieldClass(elem);
-        codeWriter.writeTypeLine(mapBasicTypesToReactType(elem))
+        codeWriter.writeTypeLine(mapBasicTypesToReactType(elem, this.genericArr))
       } else {
         line += ' = None';
       }
@@ -328,7 +329,7 @@ class DjangoCodeGenerator {
    * @param {type.Model} asso
    * @param {Object} options
    */
-  writeRealation (codeWriter, elem, asso, options) {
+  writeRealation (codeWriter, elem, asso, options, genericArr) {
 
     var tags = asso.tags;
     var tags_str = "";
@@ -355,25 +356,26 @@ class DjangoCodeGenerator {
     }
 
     if (asso.end1.reference === elem && asso.end2.navigable === true && asso.end2.multiplicity && asso.end1.multiplicity) {       
+        var genericValue = genericArr.shift();
         if (asso.end1.multiplicity == "1" && asso.end2.multiplicity == "1"){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.OneToOneField('" + refObjName + "'"+ tags_str +")");
-          codeWriter.writeTypeLine(var_name+':number|'+refObjName)
+          codeWriter.writeTypeLine(var_name + ':' + genericValue);
         }
 
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && asso.end2.multiplicity == "1"){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str +")");
-          codeWriter.writeTypeLine(var_name+':number|'+refObjName)
+          codeWriter.writeTypeLine(var_name + ':' + genericValue);
         }
 
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..*', '1..*', '*'].includes(asso.end2.multiplicity.trim())){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
           codeWriter.writeLine(var_name + " = models.ManyToManyField('" + asso.end2.reference.name + "'"+ tags_str +")");
-          codeWriter.writeTypeLine(var_name+':number[]|'+refObjName+'[]')
+          codeWriter.writeTypeLine(var_name + ':' + genericValue + '[]');
         }
     }
   }
@@ -440,7 +442,28 @@ class DjangoCodeGenerator {
       line += '(models.Model)';
     }
 
-    codeWriter.writeTypeLine('export type ' + elem.name + ' = {');
+    function makeGeneric(genericArr) {
+      let generic = '';
+      let count = 0;
+
+      elem.attributes.forEach((attr) => {
+        if (attr.type.name === 'foreign') count++;
+        if (attr.type.name === 'onetoone') count++;
+        if (attr.type.name === 'manytomany') count++;
+      });
+      if (elem.ownedElements.length > 0) count += elem.ownedElements.length;
+
+      if (count > 0) {
+        for (let i = 0; i < count; i++) {
+          generic += String.fromCharCode(65 + i) + '=number,';
+          genericArr.push(String.fromCharCode(65 + i));
+        }
+      } else return generic;
+
+      return '<' + generic.slice(0, -1) + '>';
+    }
+
+    codeWriter.writeTypeLine('export type ' + elem.name + makeGeneric(this.genericArr) + ' = {');
     codeWriter.indentType();
     codeWriter.writeTypeLine('id:number');
     codeWriter.writeLine(line + ':');
@@ -472,7 +495,7 @@ class DjangoCodeGenerator {
       // Relations
       for (var i = 0, len = associations.length; i < len; i++) {
         var asso = associations[i];
-        self.writeRealation(codeWriter, elem, asso, options);
+        self.writeRealation(codeWriter, elem, asso, options, this.genericArr);
       }
       
       codeWriter.writeLine();
@@ -484,6 +507,7 @@ class DjangoCodeGenerator {
         });
       }
     }
+    this.genericArr = [];
     codeWriter.outdentType();
     codeWriter.writeTypeLine('}');
     codeWriter.outdent();
@@ -542,20 +566,21 @@ class DjangoCodeGenerator {
   }
 }
 
-function mapBasicTypesToReactType(elem) {
+function mapBasicTypesToReactType(elem, genericArr) {
   var tags = elem.tags.filter(e=>e.name === 'to')
   var ref_name = 'number';
   var ref_list = 'number[]';
   if (tags.length > 0) {
+    var genericValue = genericArr.shift();
     if (tags[0].value.indexOf('api.') != -1) {
-      ref_name += '|'+tags[0].value.replace('api.','')
-      ref_list += '|'+tags[0].value.replace('api.','')+'[]'
+      ref_name = genericValue;
+      ref_list = genericValue + '[]';
     } else if (tags[0].value.indexOf('.') === -1) {
-      ref_name += '|'+tags[0].value
-      ref_list += '|'+tags[0].value+'[]'
+      ref_name = genericValue;
+      ref_list = genericValue + '[]';
     }else {
-      ref_name += '|custom.' + tags[0].value
-      ref_list += '|custom.' + tags[0].value + '[]'
+      ref_name = genericValue;
+      ref_list = genericValue + '[]';
     }
   } 
   var type_maps = {
